@@ -345,8 +345,9 @@ class _EasySearchBarState extends State<EasySearchBar>
         appBarTheme.backgroundColor ??
         theme.primaryColor;
 
-    Color? foregroundColor =
-        widget.foregroundColor ?? appBarTheme.foregroundColor ?? colors.onPrimary;
+    Color? foregroundColor = widget.foregroundColor ??
+        appBarTheme.foregroundColor ??
+        colors.onPrimary;
 
     Color? searchBackgroundColor = widget.searchBackgroundColor ??
         scaffold!.widget.backgroundColor ??
@@ -378,6 +379,32 @@ class _EasySearchBarState extends State<EasySearchBar>
             ? SystemUiOverlayStyle.dark
             : SystemUiOverlayStyle.light);
 
+    Widget? leading;
+
+    if (scaffold?.hasDrawer ?? false) {
+      leading = IconTheme(
+          data: iconTheme,
+          child: IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => scaffold!.openDrawer(),
+              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip));
+    } else if (canPop) {
+      leading = IconTheme(
+        data: iconTheme,
+        child: IconButton(
+            icon: const Icon(Icons.arrow_back_outlined),
+            onPressed: () => Navigator.pop(context),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip),
+      );
+    } else if (widget.leading != null) {
+      leading = widget.leading;
+    }
+
+    if (leading != null) {
+      leading =
+          Padding(padding: const EdgeInsets.only(right: 10), child: leading);
+    }
+
     return WillPopScope(
       onWillPop: preventPopIfSearchIsOpen,
       child: CompositedTransformTarget(
@@ -395,21 +422,24 @@ class _EasySearchBarState extends State<EasySearchBar>
                       child: LayoutBuilder(builder: (context, constraints) {
                         return Container(
                             margin: EdgeInsets.only(
-                                top: widget.isFloating ? 5 : 0,
-                                left: widget.isFloating ? 5 : 0,
-                                right: widget.isFloating ? 5 : 0),
+                                top: floatingSpace,
+                                left: floatingSpace,
+                                right: floatingSpace),
                             height: 66,
                             child: Material(
                                 color: backgroundColor,
-                                borderRadius: BorderRadius.circular(
-                                    widget.isFloating ? 5 : 0),
+                                borderRadius:
+                                    BorderRadius.circular(floatingSpace),
                                 child: Stack(children: [
                                   Container(
-                                      height: widget.appBarHeight +
-                                          (widget.isFloating ? 5 : 0),
+                                      height:
+                                          widget.appBarHeight + floatingSpace,
                                       width: double.infinity,
                                       padding: const EdgeInsets.only(
-                                          top: 10, left: 5, right: 3, bottom: 10),
+                                          top: 10,
+                                          left: 5,
+                                          right: 3,
+                                          bottom: 10),
                                       child: Row(
                                           mainAxisSize: MainAxisSize.max,
                                           mainAxisAlignment:
@@ -418,59 +448,13 @@ class _EasySearchBarState extends State<EasySearchBar>
                                               CrossAxisAlignment.center,
                                           children: [
                                             Visibility(
-                                                visible: scaffold!.hasDrawer,
-                                                child: IconTheme(
-                                                    data: iconTheme,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              right: 10),
-                                                      child: IconButton(
-                                                          icon: const Icon(
-                                                              Icons.menu),
-                                                          onPressed: () =>
-                                                              scaffold
-                                                                  .openDrawer(),
-                                                          tooltip:
-                                                              MaterialLocalizations
-                                                                      .of(context)
-                                                                  .openAppDrawerTooltip),
-                                                    )),
-                                                replacement: Visibility(
-                                                    visible: canPop,
-                                                    child: IconTheme(
-                                                      data: iconTheme,
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                                right: 10),
-                                                        child: IconButton(
-                                                            icon: const Icon(Icons
-                                                                .arrow_back_outlined),
-                                                            onPressed: () =>
-                                                                Navigator.pop(
-                                                                    context),
-                                                            tooltip: MaterialLocalizations
-                                                                    .of(context)
-                                                                .backButtonTooltip),
-                                                      ),
-                                                    ),
-                                                    replacement: Visibility(
-                                                      visible:
-                                                          widget.leading != null,
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                                right: 10),
-                                                        child: widget.leading,
-                                                      ),
-                                                      replacement:
-                                                          const SizedBox(),
-                                                    ))),
+                                                visible: leading != null,
+                                                child: leading!),
                                             Expanded(
                                                 child: Container(
-                                                    margin: const EdgeInsets.only(
-                                                        left: 10),
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            left: 10),
                                                     child: DefaultTextStyle(
                                                       style: titleTextStyle,
                                                       softWrap: false,
@@ -478,61 +462,14 @@ class _EasySearchBarState extends State<EasySearchBar>
                                                           TextOverflow.ellipsis,
                                                       child: widget.title,
                                                     ))),
-                                            ...List.generate(
-                                                widget.actions.length + 1,
-                                                (index) {
-                                              if (widget.actions.length ==
-                                                  index) {
-                                                return IconTheme(
-                                                    data: iconTheme,
-                                                    child: IconButton(
-                                                        icon: const Icon(
-                                                            Icons.search),
-                                                        iconSize:
-                                                            iconTheme.size ?? 24,
-                                                        onPressed: _openSearch,
-                                                        tooltip:
-                                                            MaterialLocalizations
-                                                                    .of(context)
-                                                                .searchFieldLabel));
-                                              }
-
-                                              return IconTheme(
-                                                  data: iconTheme,
-                                                  child: widget.actions[index]);
-                                            })
+                                            ...buildActions(iconTheme, context)
                                           ])),
-                                  Positioned(
-                                      right: 0,
-                                      top: 0,
-                                      child: AnimatedBuilder(
-                                          animation: _controller,
-                                          builder: (context, child) {
-                                            return Container(
-                                                alignment: Alignment.center,
-                                                height: constraints.maxHeight -
-                                                    (widget.isFloating ? 5 : 0),
-                                                width: _containerSizeAnimation.value *
-                                                        constraints.maxWidth -
-                                                    (_containerSizeAnimation.value *
-                                                        (widget.isFloating
-                                                            ? 10
-                                                            : 0)),
-                                                decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.only(
-                                                        bottomLeft: Radius.circular(
-                                                            _containerBorderRadiusAnimation.value *
-                                                                    30 +
-                                                                (widget.isFloating
-                                                                    ? 5
-                                                                    : 0)),
-                                                        topLeft: Radius.circular(
-                                                            _containerBorderRadiusAnimation.value * 30 + (widget.isFloating ? 5 : 0)),
-                                                        topRight: Radius.circular(widget.isFloating ? 5 : 0),
-                                                        bottomRight: Radius.circular(widget.isFloating ? 5 : 0)),
-                                                    color: searchBackgroundColor),
-                                                child: Opacity(opacity: _textFieldOpacityAnimation.value, child: TextField(onSubmitted: (_) => _onSearch(), maxLines: 1, controller: _searchController, textInputAction: TextInputAction.search, cursorColor: cursorColor, focusNode: _focusNode, textAlignVertical: TextAlignVertical.center, style: widget.searchTextStyle, keyboardType: widget.searchTextKeyboardType, decoration: InputDecoration(contentPadding: const EdgeInsets.only(left: 20, right: 10), fillColor: searchBackgroundColor, filled: true, hintText: widget.searchHintText, hintMaxLines: 1, hintStyle: searchHintStyle, border: InputBorder.none, prefixIcon: IconTheme(data: searchIconTheme, child: IconButton(icon: const Icon(Icons.arrow_back_outlined), onPressed: _closeSearch))))));
-                                          }))
+                                  buildTextInput(
+                                      constraints,
+                                      searchBackgroundColor,
+                                      cursorColor,
+                                      searchHintStyle,
+                                      searchIconTheme)
                                 ])));
                       }),
                     ),
@@ -540,6 +477,72 @@ class _EasySearchBarState extends State<EasySearchBar>
                 ),
               ))),
     );
+  }
+
+  List<Widget> buildActions(IconThemeData iconTheme, BuildContext context) {
+    return List.generate(widget.actions.length, (index) {
+      return IconTheme(data: iconTheme, child: widget.actions[index]);
+    })
+      ..add(IconTheme(
+          data: iconTheme,
+          child: IconButton(
+              icon: const Icon(Icons.search),
+              iconSize: iconTheme.size ?? 24,
+              onPressed: _openSearch,
+              tooltip: MaterialLocalizations.of(context).searchFieldLabel)));
+  }
+
+  Positioned buildTextInput(
+      BoxConstraints constraints,
+      Color searchBackgroundColor,
+      Color cursorColor,
+      TextStyle searchHintStyle,
+      IconThemeData searchIconTheme) {
+    return Positioned(
+        right: 0,
+        top: 0,
+        child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Container(
+                  alignment: Alignment.center,
+                  height: constraints.maxHeight - floatingSpace,
+                  width: _containerSizeAnimation.value * constraints.maxWidth -
+                      (_containerSizeAnimation.value * (floatingSpace * 2)),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(
+                              _containerBorderRadiusAnimation.value * 30 +
+                                  (floatingSpace)),
+                          topLeft: Radius.circular(
+                              _containerBorderRadiusAnimation.value * 30 +
+                                  (floatingSpace)),
+                          topRight: Radius.circular(floatingSpace),
+                          bottomRight: Radius.circular(floatingSpace)),
+                      color: searchBackgroundColor),
+                  child: Opacity(
+                      opacity: _textFieldOpacityAnimation.value,
+                      child: TextField(
+                          onSubmitted: (_) => _onSearch(),
+                          maxLines: 1,
+                          controller: _searchController,
+                          textInputAction: TextInputAction.search,
+                          cursorColor: cursorColor,
+                          focusNode: _focusNode,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: widget.searchTextStyle,
+                          keyboardType: widget.searchTextKeyboardType,
+                          decoration: InputDecoration(
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              fillColor: searchBackgroundColor,
+                              filled: true,
+                              hintText: widget.searchHintText,
+                              hintMaxLines: 1,
+                              hintStyle: searchHintStyle,
+                              border: InputBorder.none,
+                              prefixIcon: IconTheme(data: searchIconTheme, child: IconButton(icon: const Icon(Icons.arrow_back_outlined), onPressed: _closeSearch))))));
+            }));
   }
 
   void _onSearch() {
@@ -562,13 +565,17 @@ class _EasySearchBarState extends State<EasySearchBar>
     _searchController.clear();
     _onSearch();
   }
-  
+
   Future<bool> preventPopIfSearchIsOpen() {
     if (_controller.isCompleted) {
       _closeSearch();
       return Future.value(false);
     }
     return Future.value(true);
+  }
+
+  double get floatingSpace {
+    return widget.isFloating ? 5.0 : 0.0;
   }
 
   @override
